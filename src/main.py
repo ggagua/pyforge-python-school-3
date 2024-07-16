@@ -12,10 +12,10 @@ def substructure_search(mols, mol):
                 matches.append(mol)
         return matches
     except:
-        print("Error: Invalid SMILES string")
+        return f"Error: Invalid SMILES string"
 
 
 
 # Perform a substructure search
-final = substructure_search(["CCO", "c1ccccc1", "CC(=O)O", "CC(=O)Oc1ccccc1C(=O)O"], "c1ccccc1")
+final = substructure_search(["CCO", "c1ccccc1", "CC(=O)O", "CC(=O)Oc1ccccc1C(=O)O"], "c1cccc1")
 print(final)
