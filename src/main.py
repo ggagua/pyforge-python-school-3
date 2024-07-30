@@ -4,6 +4,7 @@ from rdkit import Chem
 from rdkit.Chem import Draw
 import io
 from fastapi.responses import StreamingResponse
+from os import getenv
 
 app = FastAPI()
 
@@ -39,6 +40,11 @@ class Molecule(BaseModel):
                 },
             ]
         }
+
+
+@app.get("/")
+def get_server():
+    return {"server_id": getenv("SERVER_ID", "1")}
 
 
 @app.post("/molecules/add", response_model=Molecule, response_description="Added molecule",
