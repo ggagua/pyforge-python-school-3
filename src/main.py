@@ -4,6 +4,7 @@ from rdkit import Chem
 from rdkit.Chem import Draw
 import io
 from fastapi.responses import StreamingResponse
+from os import getenv
 
 app = FastAPI()
 
@@ -39,6 +40,11 @@ class Molecule(BaseModel):
                 },
             ]
         }
+
+
+@app.get("/")
+def get_server():
+    return {"server_id": getenv("SERVER_ID", "1")}
 
 
 @app.post("/molecules/add", response_model=Molecule, response_description="Added molecule",
@@ -159,9 +165,11 @@ def search_molecules_by_substructure(mol: str):
       - **Matches**: List of SMILES strings of molecules containing the substructure.
     """
     try:
+        if not mol:
+            raise HTTPException(status_code=400, detail="Invalid substructure SMILES string. Must be a non-empty string.")
         matches = substructure_search([mol_dict["smiles"] for mol_dict in smiles_db], mol)
     except ValueError as ve:
-        # Provided error's desc from base function
+        # Provided error's description from the base function
         raise HTTPException(status_code=400, detail=str(ve))
     return {"matches": matches}
 
