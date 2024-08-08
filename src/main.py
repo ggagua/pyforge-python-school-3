@@ -165,9 +165,11 @@ def search_molecules_by_substructure(mol: str):
       - **Matches**: List of SMILES strings of molecules containing the substructure.
     """
     try:
+        if not mol:
+            raise HTTPException(status_code=400, detail="Invalid substructure SMILES string. Must be a non-empty string.")
         matches = substructure_search([mol_dict["smiles"] for mol_dict in smiles_db], mol)
     except ValueError as ve:
-        # Provided error's desc from base function
+        # Provided error's description from the base function
         raise HTTPException(status_code=400, detail=str(ve))
     return {"matches": matches}
 
