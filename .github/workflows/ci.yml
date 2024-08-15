@@ -27,16 +27,9 @@ jobs:
     steps:
       - name: Checkout the Repository
         uses: actions/checkout@v4
-docker_test_job:
-  runs-on: ubuntu-latest
-
-  steps:
-    - name: Checkout the Repository
-      uses: actions/checkout@v4
-    - name: Build Docker Image
-      run: |
-        docker build --no-cache -t my-app -f src/Dockerfile src/
-    - name: Run Tests in Docker Container
-      run: |
-        docker run --rm my-app python -m pytest src/pytest_main.py
-
+      - name: Build Docker Image
+        run: |
+          docker build --no-cache -t my-app -f src/Dockerfile src/
+      - name: Run Tests in Docker Container
+        run: |
+          docker run --rm my-app python -m pytest src/pytest_main.py
