@@ -32,4 +32,4 @@ jobs:
           docker build --no-cache -t my-app -f src/Dockerfile src/
       - name: Run Tests in Docker Container
         run: |
-          docker run --rm my-app python -m pytest src/pytest_main.py
+          docker run --rm my-app python -m pytest pytest_main.py
