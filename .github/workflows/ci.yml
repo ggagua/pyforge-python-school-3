@@ -34,7 +34,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Build Docker Image
         run: |
-          docker build -t my-app .
+          docker build -t my-app -f src/Dockerfile src/
       - name: Run Tests in Docker Container
         run: |
           docker run --rm my-app pytest src/pytest_main.py
