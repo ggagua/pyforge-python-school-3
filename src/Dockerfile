@@ -3,7 +3,7 @@ FROM continuumio/miniconda3
 WORKDIR /app
 
 #Had to install pip version because conda did not work, it had problems with 3.12 Python version
-RUN pip install rdkit
+RUN pip install rdkit pytest
 
 COPY requirements.txt .
 
