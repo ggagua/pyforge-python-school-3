@@ -4,6 +4,7 @@ from . import models, schemas
 from rdkit import Chem
 from typing import List, Optional
 
+
 async def get_molecule(db: AsyncSession, molecule_id: int) -> Optional[models.Molecule]:
     """
     Retrieve a single molecule by its ID.
@@ -15,6 +16,7 @@ async def get_molecule(db: AsyncSession, molecule_id: int) -> Optional[models.Mo
     result = await db.execute(select(models.Molecule).filter(models.Molecule.id == molecule_id))
     return result.scalar_one_or_none()
 
+
 async def get_molecules(db: AsyncSession, skip: int = 0) -> List[models.Molecule]:
     """
     Retrieve a list of molecules with optional pagination.
@@ -25,6 +27,7 @@ async def get_molecules(db: AsyncSession, skip: int = 0) -> List[models.Molecule
     """
     result = await db.execute(select(models.Molecule).offset(skip))
     return result.scalars().all()
+
 
 async def create_molecule(db: AsyncSession, molecule: schemas.MoleculeCreate) -> models.Molecule:
     """
@@ -40,7 +43,9 @@ async def create_molecule(db: AsyncSession, molecule: schemas.MoleculeCreate) ->
     await db.refresh(db_molecule)
     return db_molecule
 
-async def update_molecule(db: AsyncSession, molecule_id: int, molecule: schemas.MoleculeUpdate) -> Optional[models.Molecule]:
+
+async def update_molecule(db: AsyncSession, molecule_id: int, molecule: schemas.MoleculeUpdate) -> Optional[
+    models.Molecule]:
     """
     Update an existing molecule by its ID.
 
@@ -58,6 +63,7 @@ async def update_molecule(db: AsyncSession, molecule_id: int, molecule: schemas.
         await db.refresh(db_molecule)
         return db_molecule
     return None
+
 
 async def delete_molecule(db: AsyncSession, molecule_id: int) -> Optional[models.Molecule]:
     """
@@ -92,7 +98,6 @@ async def substructure_search(db: AsyncSession, mol: str) -> List[str]:
     result = await db.execute(select(models.Molecule))
     molecules = result.scalars().all()
 
-    # Prepare to collect matches
     matches = []
     for molecule in molecules:
         try:

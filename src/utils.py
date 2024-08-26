@@ -2,6 +2,7 @@ import io
 from rdkit.Chem import Draw
 
 
+# In utils since has reusable value
 def draw_molecule(mol) -> bytes:
     """
     Draw a molecule from a SMILES string and return the image as bytes.

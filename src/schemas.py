@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 
 
+# Will add some later
 class MoleculeBase(BaseModel):
     name: str
     smiles: str

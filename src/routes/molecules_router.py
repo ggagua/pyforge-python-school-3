@@ -3,7 +3,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from src import crud, schemas
 from src.database import get_db
-from src.crud import substructure_search
 
 router = APIRouter()
 

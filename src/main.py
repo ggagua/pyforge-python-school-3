@@ -8,7 +8,8 @@ app = FastAPI()
 
 @app.get("/")
 def get_server():
-    return {"server_id": getenv("SERVER_ID", "1")}
+    return {"server_id": "Server balancing is turned off"}
+    # return {"server_id": getenv("SERVER_ID", "1")}
 
 
 app.include_router(molecules_router, prefix="/molecules", tags=["Molecules"])
