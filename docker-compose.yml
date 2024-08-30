@@ -1,4 +1,38 @@
 services:
+  web1:
+    build: ./src
+    volumes:
+      - ./src:/app/src
+    environment:
+      SERVER_ID: SERVER-1
+      PROJECT_NAME: ${PROJECT_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      PYTHONPATH: /app/src
+
+  web2:
+    build: ./src
+    volumes:
+      - ./src:/app/src
+    environment:
+      SERVER_ID: SERVER-2
+      PROJECT_NAME: ${PROJECT_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      PYTHONPATH: /app/src
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+    depends_on:
+      - web1
+      - web2
+
   postgres:
     image: postgres:latest
     container_name: postgres_molecules_app
