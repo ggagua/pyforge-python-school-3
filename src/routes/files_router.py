@@ -3,6 +3,7 @@ from fastapi.responses import StreamingResponse
 from src.utils import draw_molecule
 from rdkit import Chem
 import io
+from src.logger import logger
 
 # Global storage to store images temporarily
 image_storage = {}
@@ -31,7 +32,9 @@ async def upload_file(file: UploadFile = File(...)):
         - **400 Bad Request**: If the file type is not `.txt`.
         - **422 Unprocessable Entity**: If every single data in the file is invalid (not SMILES).
     """
+    logger.info(f"Received file upload request: {file.filename}")
     if not file.filename.endswith(".txt"):
+        logger.warning(f"Invalid file type uploaded: {file.filename}")
         raise HTTPException(status_code=400, detail="Invalid file type. Please upload a .txt file.")
 
     contents = await file.read()
@@ -53,9 +56,12 @@ async def upload_file(file: UploadFile = File(...)):
                         "smiles": smiles
                     })  # Return name and SMILES instead of returning the original dict
         except ValueError as e:
+            logger.error(f"Value error processing SMILES {smiles}: {e}")
             raise HTTPException(status_code=400, detail=str(e))
     if not results:
+        logger.warning("File did not contain a single valid SMILES string.")
         raise HTTPException(status_code=422, detail="File did not contain a single valid SMILES string.")
+    logger.info(f"Generated images for {len(results)} molecules.")
     return {"molecules": results}
 
 
@@ -77,6 +83,7 @@ async def get_image(image_name: str):
     """
     image_data = image_storage.get(image_name)
     if not image_data:
+        logger.warning(f"Image not found: {image_name}")
         raise HTTPException(status_code=404, detail="Image not found")
-
+    logger.info(f"Image fetched successfully: {image_name}")
     return StreamingResponse(io.BytesIO(image_data), media_type="image/png")

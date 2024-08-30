@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from src import crud, schemas
 from src.database import get_db
+from src.logger import logger
 
 router = APIRouter()
 
@@ -21,21 +22,40 @@ async def add_molecule(molecule: schemas.MoleculeCreate, db: AsyncSession = Depe
     **Raises**:
       - **HTTPException**: If a molecule with the same ID or name already exists.
     """
+    logger.info(f"Attempting to add molecule: {molecule}")
     try:
-        return await crud.create_molecule(db=db, molecule=molecule)
+        result = await crud.create_molecule(db=db, molecule=molecule)
+        logger.info(f"Molecule added successfully: {result}")
+        return result
     except ValueError as ve:
+        logger.error(f"Error adding molecule: {ve}")
         raise HTTPException(status_code=400, detail=str(ve))
 
 
 @router.get("/", response_model=List[schemas.Molecule])
-async def list_molecules(db: AsyncSession = Depends(get_db)):
+async def list_molecules(
+    skip: int = Query(0, alias="start", ge=0),
+    limit: int = Query(100, le=1000),  # You can adjust the max limit as needed
+    db: AsyncSession = Depends(get_db)
+):
     """
-    List all molecules in the database.
+    List molecules from the database with pagination.
 
-    **Returns**:
-      - **List[schemas.Molecule]**: A list of all molecules with their details.
+    :param skip: Number of records to skip (for pagination).
+    :param limit: Maximum number of records to retrieve.
+    :param db: The database session.
+    :return: A list of molecules.
     """
-    return await crud.get_molecules(db=db)
+    logger.info("Listing molecules with skip=%d and limit=%d", skip, limit)
+
+    # Initialize an empty list to collect molecules
+    molecules = []
+
+    # Collect results from the asynchronous generator
+    async for molecule in crud.get_molecules(db=db, skip=skip, limit=limit):
+        molecules.append(molecule)
+
+    return molecules
 
 
 @router.get("/{molecule_id}", response_model=schemas.Molecule)
@@ -52,8 +72,10 @@ async def get_molecule_by_id(molecule_id: int, db: AsyncSession = Depends(get_db
     **Raises**:
       - **HTTPException**: If the molecule is not found.
     """
+    logger.info(f"Fetching molecule with ID: {molecule_id}")
     molecule = await crud.get_molecule(db=db, molecule_id=molecule_id)
     if not molecule:
+        logger.warning(f"Molecule with ID {molecule_id} not found.")
         raise HTTPException(status_code=404, detail="Molecule not found.")
     return molecule
 
@@ -74,9 +96,13 @@ async def update_molecule_by_id(molecule_id: int, updated_molecule: schemas.Mole
     **Raises**:
       - **HTTPException**: If the molecule is not found.
     """
+    logger.info(f"Updating molecule with ID: {molecule_id}")
     try:
-        return await crud.update_molecule(db=db, molecule_id=molecule_id, molecule=updated_molecule)
+        result = await crud.update_molecule(db=db, molecule_id=molecule_id, molecule=updated_molecule)
+        logger.info(f"Updating molecule with ID: {molecule_id}")
+        return result
     except ValueError as ve:
+        logger.error(f"Error updating molecule with ID {molecule_id}: {ve}")
         raise HTTPException(status_code=400, detail=str(ve))
 
 
@@ -94,9 +120,13 @@ async def delete_molecule_by_id(molecule_id: int, db: AsyncSession = Depends(get
     **Raises**:
       - **HTTPException**: If the molecule is not found.
     """
+    logger.info(f"Deleting molecule with ID: {molecule_id}")
     try:
-        return await crud.delete_molecule(db=db, molecule_id=molecule_id)
+        result = await crud.delete_molecule(db=db, molecule_id=molecule_id)
+        logger.info(f"Molecule with ID {molecule_id} deleted successfully.")
+        return result
     except ValueError:
+        logger.warning(f"Molecule with ID {molecule_id} not found for deletion.")
         raise HTTPException(status_code=404, detail="Molecule not found.")
 
 
@@ -115,8 +145,10 @@ async def search_molecules_by_substructure(mol: str, db: AsyncSession = Depends(
     **Raises**:
       - **HTTPException**: If the substructure SMILES string is invalid or if there are issues processing the molecules.
     """
+    logger.info(f"Searching for molecules containing substructure: {mol}")
     try:
         if not mol:
+            logger.info(f"No molecules found containing substructure: {mol}")
             raise HTTPException(status_code=400,
                                 detail="Invalid substructure SMILES string. Must be a non-empty string.")
 
@@ -124,9 +156,10 @@ async def search_molecules_by_substructure(mol: str, db: AsyncSession = Depends(
 
         if not matches:
             raise HTTPException(status_code=404, detail="No molecules found containing the given substructure.")
-
+        logger.info(f"Found molecules containing substructure: {mol}")
         return {"matches": matches}
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
+        logger.error(f"Value error during substructure search: {e}")
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")

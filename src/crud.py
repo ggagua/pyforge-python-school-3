@@ -1,8 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from . import models, schemas
+from src import models, schemas
 from rdkit import Chem
-from typing import List, Optional
+from typing import List, Optional, AsyncIterator
 
 
 async def get_molecule(db: AsyncSession, molecule_id: int) -> Optional[models.Molecule]:
@@ -17,16 +17,21 @@ async def get_molecule(db: AsyncSession, molecule_id: int) -> Optional[models.Mo
     return result.scalar_one_or_none()
 
 
-async def get_molecules(db: AsyncSession, skip: int = 0) -> List[models.Molecule]:
+async def get_molecules(db: AsyncSession, skip: int = 0, limit: int = 100) -> AsyncIterator[models.Molecule]:
     """
-    Retrieve a list of molecules with optional pagination.
+    Retrieve a list of molecules with optional pagination as an asynchronous generator.
 
     :param db: The database session.
     :param skip: Number of records to skip (for pagination).
-    :return: A list of molecules.
+    :param limit: Maximum number of records to retrieve.
+    :return: An asynchronous iterator of molecules.
     """
-    result = await db.execute(select(models.Molecule).offset(skip))
-    return result.scalars().all()
+    result = await db.execute(select(models.Molecule).offset(skip).limit(limit))
+
+    # I'm fetching synchronously and yielding them asynchronously, otherwise it errors, would accept better practices
+    molecules = result.scalars().all()
+    for molecule in molecules:
+        yield molecule
 
 
 async def create_molecule(db: AsyncSession, molecule: schemas.MoleculeCreate) -> models.Molecule:
