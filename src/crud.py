@@ -1,51 +1,60 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from src import models, schemas
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from fastapi import HTTPException, status
 from rdkit import Chem
 from typing import List, Optional, AsyncIterator
+from src import models, schemas
 
 
 async def get_molecule(db: AsyncSession, molecule_id: int) -> Optional[models.Molecule]:
     """
     Retrieve a single molecule by its ID.
-
-    :param db: The database session.
-    :param molecule_id: The ID of the molecule to retrieve.
-    :return: The molecule with the specified ID, or None if not found.
     """
-    result = await db.execute(select(models.Molecule).filter(models.Molecule.id == molecule_id))
-    return result.scalar_one_or_none()
+    try:
+        result = await db.execute(select(models.Molecule).filter(models.Molecule.id == molecule_id))
+        return result.scalar_one_or_none()
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"Error fetching molecule: {str(e)}")
 
 
 async def get_molecules(db: AsyncSession, skip: int = 0, limit: int = 100) -> AsyncIterator[models.Molecule]:
     """
     Retrieve a list of molecules with optional pagination as an asynchronous generator.
-
-    :param db: The database session.
-    :param skip: Number of records to skip (for pagination).
-    :param limit: Maximum number of records to retrieve.
-    :return: An asynchronous iterator of molecules.
     """
-    result = await db.execute(select(models.Molecule).offset(skip).limit(limit))
+    try:
+        result = await db.execute(select(models.Molecule).offset(skip).limit(limit))
+        molecules = result.scalars().all()
 
-    # I'm fetching synchronously and yielding them asynchronously, otherwise it errors, would accept better practices
-    molecules = result.scalars().all()
-    for molecule in molecules:
-        yield molecule
+        for molecule in molecules:
+            yield molecule
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"Error fetching molecules: {str(e)}")
 
 
 async def create_molecule(db: AsyncSession, molecule: schemas.MoleculeCreate) -> models.Molecule:
     """
     Create a new molecule in the database.
-
-    :param db: The database session.
-    :param molecule: The data to create the new molecule.
-    :return: The created molecule.
     """
     db_molecule = models.Molecule(name=molecule.name, smiles=molecule.smiles)
     db.add(db_molecule)
-    await db.commit()
-    await db.refresh(db_molecule)
+
+    try:
+        await db.commit()
+        await db.refresh(db_molecule)
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Molecule with this name or SMILES already exists."
+        )
+    except SQLAlchemyError as e:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"Error creating molecule: {str(e)}")
+
     return db_molecule
 
 
@@ -53,38 +62,59 @@ async def update_molecule(db: AsyncSession, molecule_id: int, molecule: schemas.
     models.Molecule]:
     """
     Update an existing molecule by its ID.
-
-    :param db: The database session.
-    :param molecule_id: The ID of the molecule to update.
-    :param molecule: The updated data for the molecule.
-    :return: The updated molecule, or None if not found.
     """
-    result = await db.execute(select(models.Molecule).filter(models.Molecule.id == molecule_id))
-    db_molecule = result.scalar_one_or_none()
-    if db_molecule:
-        db_molecule.name = molecule.name
-        db_molecule.smiles = molecule.smiles
-        await db.commit()
-        await db.refresh(db_molecule)
-        return db_molecule
-    return None
+    try:
+        result = await db.execute(select(models.Molecule).filter(models.Molecule.id == molecule_id))
+        db_molecule = result.scalar_one_or_none()
+
+        if db_molecule:
+            db_molecule.name = molecule.name
+            db_molecule.smiles = molecule.smiles
+
+            try:
+                await db.commit()
+                await db.refresh(db_molecule)
+            except IntegrityError:
+                await db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Updated molecule would violate unique constraints."
+                )
+            except SQLAlchemyError as e:
+                await db.rollback()
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                    detail=f"Error updating molecule: {str(e)}")
+
+            return db_molecule
+
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Molecule not found")
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"Error fetching molecule: {str(e)}")
 
 
 async def delete_molecule(db: AsyncSession, molecule_id: int) -> Optional[models.Molecule]:
     """
     Delete a molecule by its ID.
-
-    :param db: The database session.
-    :param molecule_id: The ID of the molecule to delete.
-    :return: The deleted molecule, or None if not found.
     """
-    result = await db.execute(select(models.Molecule).filter(models.Molecule.id == molecule_id))
-    db_molecule = result.scalar_one_or_none()
-    if db_molecule:
-        await db.delete(db_molecule)
-        await db.commit()
-        return db_molecule
-    return None
+    try:
+        result = await db.execute(select(models.Molecule).filter(models.Molecule.id == molecule_id))
+        db_molecule = result.scalar_one_or_none()
+
+        if db_molecule:
+            try:
+                await db.delete(db_molecule)
+                await db.commit()
+                return db_molecule
+            except SQLAlchemyError as e:
+                await db.rollback()
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                    detail=f"Error deleting molecule: {str(e)}")
+
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Molecule not found")
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"Error fetching molecule: {str(e)}")
 
 
 async def substructure_search(db: AsyncSession, mol: str) -> List[str]:

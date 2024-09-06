@@ -7,10 +7,11 @@ from src.logger import logger
 import json
 import redis
 from src.schemas import Molecule, MoleculeCreate, MoleculeUpdate
+import os
 
 router = APIRouter()
 
-# Configure Redis client
+# If you are running this with docker, set the host to 'redis', if not - 'localhost'
 redis_client = redis.Redis(host='redis', port=6379, db=0, decode_responses=True)
 
 
@@ -56,11 +57,14 @@ async def list_molecules(
         db: AsyncSession = Depends(get_db)
 ):
     """
-    List molecules from the database with pagination.
-    :param skip: Number of records to skip (for pagination).
-    :param limit: Maximum number of records to retrieve.
-    :param db: The database session.
-    :return: A list of molecules.
+    Get details of a specific molecule by its ID.
+    **Parameters**:
+      - **start** (*int*): Number from which you would like to fetch/start.
+        - **limit** (*int*): Number of records to fetch.
+    **Returns**:
+      - **Molecule**: The molecule with the specified ID.
+    **Raises**:
+      - **HTTPException**: If the molecule is not found.
     """
     logger.info("Listing molecules with skip=%d and limit=%d", skip, limit)
 
@@ -149,10 +153,8 @@ async def search_molecules_by_substructure(mol: str, db: AsyncSession = Depends(
     **Raises**:
       - **HTTPException**: If the substructure SMILES string is invalid or if there are issues processing the molecules.
     """
-    # Create a cache key based on the substructure
     cache_key = f"substructure_search:{mol}"
 
-    # Check if the result is already cached
     cached_result = get_cached_result(cache_key)
     if cached_result is not None:
         logger.info(f"Cache hit for substructure search: {mol}")
@@ -171,8 +173,7 @@ async def search_molecules_by_substructure(mol: str, db: AsyncSession = Depends(
         if not matches:
             raise HTTPException(status_code=404, detail="No molecules found containing the given substructure.")
 
-        # Cache the result
-        set_cache(cache_key, {"matches": matches}, expiration=3600)  # Cache for 1 hour
+        set_cache(cache_key, {"matches": matches})
 
         logger.info(f"Found molecules containing substructure: {mol}")
         return {"matches": matches}
