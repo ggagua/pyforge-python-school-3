@@ -1,5 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from celery.result import AsyncResult
+from tasks import substructure_search_task
+from src.celery_worker import celery
 from typing import List, Dict, Optional
 from src import crud
 from src.database import get_db
@@ -7,7 +10,6 @@ from src.logger import logger
 import json
 import redis
 from src.schemas import Molecule, MoleculeCreate, MoleculeUpdate
-import os
 
 router = APIRouter()
 
@@ -141,43 +143,52 @@ async def delete_molecule_by_id(molecule_id: int, db: AsyncSession = Depends(get
         raise HTTPException(status_code=404, detail="Molecule not found.")
 
 
-@router.get("/molecules/search/", response_description="Returned the list of all molecules containing the substructure",
-            summary="Search for molecules containing a substructure", tags=["Molecules"])
-async def search_molecules_by_substructure(mol: str, db: AsyncSession = Depends(get_db)) -> dict:
+@router.post("/tasks/search_molecules/")
+async def start_substructure_search(mol: str):
     """
-    Search for molecules containing the given substructure.
+    Get the result of the substructure search task.
+
     **Parameters**:
-      - **mol** (*str*): SMILES string representing the substructure to search for.
+      - **task_id** (*str*): The ID of the Celery task.
+
     **Returns**:
-      - **dict**: A dictionary containing a list of SMILES strings of molecules containing the substructure.
+      - **object**: containing the task status and result, with the following keys:
+        - **task_id** (*str*): The task ID.
+        - **status** (*str*): The status of the task. It can be "Task is still processing", "Task completed", or state.
+        - **result** (*any*, optional): The result of the task, available if the task is completed successfully.
+
     **Raises**:
-      - **HTTPException**: If the substructure SMILES string is invalid or if there are issues processing the molecules.
+      - **HTTPException**: If the task is not found or another error occurs.
     """
-    cache_key = f"substructure_search:{mol}"
+    if not mol:
+        raise HTTPException(status_code=400, detail="Invalid substructure SMILES string. Must be a non-empty string.")
 
-    cached_result = get_cached_result(cache_key)
-    if cached_result is not None:
-        logger.info(f"Cache hit for substructure search: {mol}")
-        return {"matches": cached_result}
+    task = substructure_search_task.delay(mol)
+    return {"task_id": task.id}
 
-    logger.info(f"Searching for molecules containing substructure: {mol}")
 
-    try:
-        if not mol:
-            logger.info(f"No molecules found containing substructure: {mol}")
-            raise HTTPException(status_code=400,
-                                detail="Invalid substructure SMILES string. Must be a non-empty string.")
+@router.get("/tasks/{task_id}")
+async def get_substructure_search_result(task_id: str):
+    """
+    Get the result of the substructure search task.
 
-        matches = await crud.substructure_search(db=db, mol=mol)
+    **Parameters**:
+      - **task_id** (*str*): The ID of the Celery task to query.
 
-        if not matches:
-            raise HTTPException(status_code=404, detail="No molecules found containing the given substructure.")
+    **Returns**:
+      - **dict**: A dictionary containing the status and result of the task. The dictionary includes:
+        - **task_id** (*str*): The ID of the task being queried.
+        - **status** (*str*): The current state of the task. Possible values are:
+          - "Task is still processing" if the task is not yet completed.
+          - "Task completed" if the task has finished successfully.
+          - The task’s current state if it is neither pending nor successful.
+        - **result** (*any*, optional): The result of the task if it is completed successfully.
+    """
+    task_result = AsyncResult(task_id, app=celery)
 
-        set_cache(cache_key, {"matches": matches})
-
-        logger.info(f"Found molecules containing substructure: {mol}")
-        return {"matches": matches}
-
-    except ValueError as ve:
-        logger.error(f"Value error during substructure search: {ve}")
-        raise HTTPException(status_code=400, detail=str(ve))
+    if task_result.state == 'PENDING':
+        return {"task_id": task_id, "status": "Task is still processing"}
+    elif task_result.state == 'SUCCESS':
+        return {"task_id": task_id, "status": "Task completed", "result": task_result.result}
+    else:
+        raise HTTPException(status_code=404, detail={"task_id": task_id, "status": task_result.state})

@@ -80,6 +80,23 @@ services:
       - "6379:6379"
     restart: unless-stopped
 
+  celery_worker:
+    build: ./src
+    command: celery -A celery_worker worker --loglevel=info
+    volumes:
+      - ./src:/app/src
+    depends_on:
+      - redis
+    environment:
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_SERVER: ${DB_SERVER}
+      DB_PORT: ${DB_PORT}
+      PROJECT_NAME: ${PROJECT_NAME}
+      PYTHONPATH: /app
+    restart: unless-stopped
+
 volumes:
   pgdata:
     driver: local
