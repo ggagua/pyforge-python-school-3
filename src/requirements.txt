@@ -137,3 +137,4 @@ wheel==0.43.0
 widgetsnbextension==4.0.11
 redis==5.0.8
 celery[redis]
+rdkit
