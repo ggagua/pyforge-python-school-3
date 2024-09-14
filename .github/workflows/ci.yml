@@ -28,14 +28,10 @@ jobs:
     services:
       postgres:
         image: postgres:latest
-        env:
-          POSTGRES_USER: ${{ secrets.DB_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          POSTGRES_DB: ${{ secrets.DB_NAME }}
         ports:
           - 5433:5432
-        options: > 
-          --health-cmd="pg_isready -U ${{ secrets.DB_USER }} -d ${{ secrets.DB_NAME }}" 
+        options: >
+          --health-cmd="pg_isready -U postgres -d postgres" 
           --health-interval=30s 
           --health-timeout=10s 
           --health-retries=5
@@ -63,8 +59,7 @@ jobs:
 
       - name: Set PYTHONPATH
         run: |
-          export PYTHONPATH=./src:$PYTHONPATH
-          echo "PYTHONPATH=$PYTHONPATH" >> $GITHUB_ENV
+          echo "PYTHONPATH=./src" >> $GITHUB_ENV
 
       - name: Run tests
         run: |
