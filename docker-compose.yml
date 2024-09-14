@@ -27,6 +27,23 @@ services:
       DB_PORT : ${DB_PORT}
       PYTHONPATH: /app/src
 
+  test:
+    build: ./src
+    volumes:
+      - ./src:/app/src
+    environment:
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_SERVER : ${DB_SERVER}
+      DB_PORT : ${DB_PORT}
+      PYTHONPATH: /app/src
+    command: >
+      pytest --maxfail=1 --disable-warnings -v src/tests
+    depends_on:
+      - postgres
+      - redis
+
   nginx:
     image: nginx:latest
     ports:

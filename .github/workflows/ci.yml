@@ -22,15 +22,57 @@ jobs:
       - name: Run flake8
         run: |
           flake8 . --max-line-length=127 --exit-zero --statistics
-  docker_test_job:
+  docker-test_job:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: ${{ secrets.DB_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.DB_NAME }}
+        ports:
+          - 5433:5432
+        options: > 
+          --health-cmd="pg_isready -U ${{ secrets.DB_USER }} -d ${{ secrets.DB_NAME }}" 
+          --health-interval=30s 
+          --health-timeout=10s 
+          --health-retries=5
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+
     steps:
-      - name: Checkout the Repository
+      - name: Checkout code
         uses: actions/checkout@v4
-      - name: Build Docker Image
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
         run: |
-          docker build --no-cache -t my-app -f src/Dockerfile src/
-#        TESTS NOT WORKING, WILL FIX LATER!
-#      - name: Run Tests in Docker Container
-#        run: |
-#          docker run --rm my-app python -m pytest pytest_main.py
+          python -m pip install --upgrade pip
+          pip install -r src/requirements.txt
+
+      - name: Copy env.copy to .env
+        run: cp env.copy .env
+
+      - name: Set PYTHONPATH
+        run: |
+          export PYTHONPATH=./src:$PYTHONPATH
+          echo "PYTHONPATH=$PYTHONPATH" >> $GITHUB_ENV
+
+      - name: Run tests
+        run: |
+          pytest --maxfail=1 --disable-warnings -v src/tests
+        env:
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_SERVER: ${{ secrets.DB_SERVER }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          PROJECT_NAME: ${{ secrets.PROJECT_NAME }}
