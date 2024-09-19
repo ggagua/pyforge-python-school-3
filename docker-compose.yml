@@ -1,18 +1,48 @@
-version: '3.8'
 services:
   web1:
     build: ./src
     volumes:
-      - ./src:/src
+      - ./src:/app/src
     environment:
       SERVER_ID: SERVER-1
+      PROJECT_NAME: ${PROJECT_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_SERVER : ${DB_SERVER}
+      DB_PORT : ${DB_PORT}
+      PYTHONPATH: /app/src
 
   web2:
     build: ./src
     volumes:
-      - ./src:/src
+      - ./src:/app/src
     environment:
       SERVER_ID: SERVER-2
+      PROJECT_NAME: ${PROJECT_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_SERVER : ${DB_SERVER}
+      DB_PORT : ${DB_PORT}
+      PYTHONPATH: /app/src
+
+  test:
+    build: ./src
+    volumes:
+      - ./src:/app/src
+    environment:
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_SERVER : ${DB_SERVER}
+      DB_PORT : ${DB_PORT}
+      PYTHONPATH: /app/src
+    command: >
+      pytest --maxfail=1 --disable-warnings -v src/tests
+    depends_on:
+      - postgres
+      - redis
 
   nginx:
     image: nginx:latest
@@ -23,3 +53,67 @@ services:
     depends_on:
       - web1
       - web2
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres_molecules_app
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data/pgdata
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    command: >
+      postgres -c max_connections=1000
+               -c shared_buffers=256MB
+               -c effective_cache_size=768MB
+               -c maintenance_work_mem=64MB
+               -c checkpoint_completion_target=0.7
+               -c wal_buffers=16MB
+               -c default_statistics_target=100
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    tty: true
+    stdin_open: true
+
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  celery_worker:
+    build: ./src
+    command: celery -A celery_worker worker --loglevel=info
+    volumes:
+      - ./src:/app/src
+    depends_on:
+      - redis
+    environment:
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_SERVER: ${DB_SERVER}
+      DB_PORT: ${DB_PORT}
+      PROJECT_NAME: ${PROJECT_NAME}
+      PYTHONPATH: /app
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+    driver: local
