@@ -32,7 +32,7 @@ jobs:
             echo "Directory not found. Creating it and cloning repository..."
             sudo mkdir -p /home/myproject
             cd /home/myproject
-            git clone https://github.com/your_username/your_repo.git .
+            git clone https://github.com/ggagua/pyforge-python-school-3.git
           else
             cd /home/myproject
             git pull origin main
