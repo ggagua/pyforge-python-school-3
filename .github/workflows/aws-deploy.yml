@@ -24,20 +24,20 @@ jobs:
         script: |
           echo "Deploying to EC2 Instance..."
           
-          # Ensure Git is installed
           sudo apt-get update
           sudo apt-get install -y git
+          
+          PROJECT_DIR="/home/${{ secrets.EC2_USER }}/myproject"
 
-          # Navigate to the app directory or clone if not present
-          if [ ! -d "/home//myproject" ]; then
+          if [ ! -d "$PROJECT_DIR" ]; then
             echo "Directory not found. Creating it and cloning repository..."
-            sudo mkdir -p /home/myproject
-            cd /home/myproject
-            git clone https://github.com/ggagua/pyforge-python-school-3.git
+            mkdir -p "$PROJECT_DIR"
+            cd "$PROJECT_DIR"
+            git clone https://github.com/ggagua/pyforge-python-school-3.git . || echo "Failed to clone repository"
           else
-            cd /home/myproject
-            git pull origin main
+            cd "$PROJECT_DIR"
+            git pull origin main || echo "Failed to pull latest changes"
           fi
 
           git status
-          echo "Repository is up to date."
+          echo "Repository is up to date."  
