@@ -140,3 +140,5 @@ celery[redis]
 rdkit
 pytest-asyncio
 httpx
+boto3
+awscli
