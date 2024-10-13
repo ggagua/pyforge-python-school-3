@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web-app
+  template:
+    metadata:
+      labels:
+        app: web-app
+    spec:
+      containers:
+        - name: web
+          image: web-image:latest
+          env:
+            - name: PROJECT_NAME
+              value: "${PROJECT_NAME}"
+            - name: DB_USER
+              value: "${DB_USER}"
+            - name: DB_PASSWORD
+              value: "${DB_PASSWORD}"
+            - name: DB_NAME
+              value: "${DB_NAME}"
+            - name: DB_SERVER
+              value: "${DB_SERVER}"
+            - name: DB_PORT
+              value: "${DB_PORT}"
+          ports:
+            - containerPort: 8000

@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: celery
+  template:
+    metadata:
+      labels:
+        app: celery
+    spec:
+      containers:
+        - name: celery
+          image: celery-image:latest
+          command: ["celery", "-A", "celery_worker", "worker", "--loglevel=info"]
+          env:
+            - name: DB_USER
+              value: "${DB_USER}"
+            - name: DB_PASSWORD
+              value: "${DB_PASSWORD}"
+            - name: DB_NAME
+              value: "${DB_NAME}"
+            - name: DB_SERVER
+              value: "${DB_SERVER}"
+            - name: DB_PORT
+              value: "${DB_PORT}"
+            - name: PROJECT_NAME
+              value: "${PROJECT_NAME}"
