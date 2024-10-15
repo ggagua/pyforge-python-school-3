@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from celery.result import AsyncResult
-from tasks import substructure_search_task
+from src.tasks import substructure_search_task
 from src.celery_worker import celery
 from typing import List, Dict, Optional
 from src import crud

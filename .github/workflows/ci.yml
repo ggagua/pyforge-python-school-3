@@ -70,3 +70,4 @@ jobs:
           DB_SERVER: ${{ secrets.DB_SERVER }}
           DB_PORT: ${{ secrets.DB_PORT }}
           PROJECT_NAME: ${{ secrets.PROJECT_NAME }}
+          AIRFLOW_UID: ${{ secrets.AIRFLOW_UID }}
