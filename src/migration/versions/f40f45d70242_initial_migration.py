@@ -1,8 +1,8 @@
-"""Update molecule table schema
+"""Initial migration
 
-Revision ID: 334df9d1581f
-Revises: 19d69ebdda30
-Create Date: 2024-08-26 12:20:53.569345
+Revision ID: f40f45d70242
+Revises: 
+Create Date: 2024-10-15 02:24:37.793165
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '334df9d1581f'
-down_revision: Union[str, None] = '19d69ebdda30'
+revision: str = 'f40f45d70242'
+down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

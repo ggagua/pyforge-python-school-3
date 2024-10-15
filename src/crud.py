@@ -4,8 +4,8 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from fastapi import HTTPException, status
 from rdkit import Chem
 from typing import List, Optional, AsyncIterator
-import models
-import schemas
+import src.models as models
+import src.schemas as schemas
 
 
 async def get_molecule(db: AsyncSession, molecule_id: int) -> Optional[models.Molecule]:

@@ -1,6 +1,6 @@
-from celery_worker import celery
-from crud import substructure_search
-from database import get_db
+from src.celery_worker import celery
+from src.crud import substructure_search
+from src.database import get_db
 import asyncio
 
 

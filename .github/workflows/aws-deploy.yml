@@ -1,43 +1,43 @@
-name: Deploy to EC2 Instance
-
-on:
-  push:
-    branches: [main, ci]
-  pull_request:
-    branches: [main, ci]
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-
-    - name: SSH into EC2 Instance
-      uses: appleboy/ssh-action@v0.1.5
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
-        key: ${{ secrets.EC2_KEY }}
-        port: 22
-        debug: true
-        script: |
-          echo "Deploying to EC2 Instance..."
-          
-          sudo apt-get update
-          sudo apt-get install -y git
-          
-          PROJECT_DIR="/home/${{ secrets.EC2_USER }}/myproject"
-
-          if [ ! -d "$PROJECT_DIR" ]; then
-            echo "Directory not found. Creating it and cloning repository..."
-            mkdir -p "$PROJECT_DIR"
-            cd "$PROJECT_DIR"
-            git clone https://github.com/ggagua/pyforge-python-school-3.git . || echo "Failed to clone repository"
-          else
-            cd "$PROJECT_DIR"
-            git pull origin main || echo "Failed to pull latest changes"
-          fi
-
-          git status
-          echo "Repository is up to date."  
+#name: Deploy to EC2 Instance
+#
+#on:
+#  push:
+#    branches: [main, ci]
+#  pull_request:
+#    branches: [main, ci]
+#jobs:
+#  deploy:
+#    runs-on: ubuntu-latest
+#
+#    steps:
+#    - name: Checkout Repository
+#      uses: actions/checkout@v4
+#
+#    - name: SSH into EC2 Instance
+#      uses: appleboy/ssh-action@v0.1.5
+#      with:
+#        host: ${{ secrets.EC2_HOST }}
+#        username: ${{ secrets.EC2_USER }}
+#        key: ${{ secrets.EC2_KEY }}
+#        port: 22
+#        debug: true
+#        script: |
+#          echo "Deploying to EC2 Instance..."
+#
+#          sudo apt-get update
+#          sudo apt-get install -y git
+#
+#          PROJECT_DIR="/home/${{ secrets.EC2_USER }}/myproject"
+#
+#          if [ ! -d "$PROJECT_DIR" ]; then
+#            echo "Directory not found. Creating it and cloning repository..."
+#            mkdir -p "$PROJECT_DIR"
+#            cd "$PROJECT_DIR"
+#            git clone https://github.com/ggagua/pyforge-python-school-3.git . || echo "Failed to clone repository"
+#          else
+#            cd "$PROJECT_DIR"
+#            git pull origin main || echo "Failed to pull latest changes"
+#          fi
+#
+#          git status
+#          echo "Repository is up to date."
